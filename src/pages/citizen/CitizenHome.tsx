@@ -1,12 +1,15 @@
 import React from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
-import { CloudRain, Wind, Thermometer, Droplets, MapPin, Navigation, AlertTriangle } from 'lucide-react';
+import { CloudRain, Wind, Thermometer, Droplets, MapPin, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useGeolocation from '../../hooks/useGeolocation';
+import { WeatherWidget } from '../../components/WeatherWidget';
 import './CitizenHome.css';
 
 const CitizenHome: React.FC = () => {
   const { currentStatus, weather, alerts } = useEmergency();
   const navigate = useNavigate();
+  const location = useGeolocation();
 
   const getStatusColor = () => {
     switch(currentStatus) {
@@ -58,14 +61,29 @@ const CitizenHome: React.FC = () => {
           <div className="location-info">
             <MapPin size={32} color="var(--brand-primary)" />
             <div>
-              <div className="location-name">Detecting area... (GPS Active)</div>
-              <div className="location-coords">Lat: 12.9716, Lng: 77.5946</div>
-              <div className="badge badge-safe mt-2">Location detected</div>
+              <div className="location-name">
+                {location.loaded 
+                  ? (location.coordinates ? "GPS Active" : "Location access denied")
+                  : "Detecting area..."}
+              </div>
+              <div className="location-coords">
+                {location.coordinates 
+                  ? `Lat: ${location.coordinates.lat.toFixed(4)}, Lng: ${location.coordinates.lng.toFixed(4)}`
+                  : 'Waiting for coordinates...'}
+              </div>
+              <div className={`badge ${location.coordinates ? 'badge-safe' : 'badge-caution'} mt-2`}>
+                {location.loaded ? 'Location detected' : 'Detecting...'}
+              </div>
             </div>
           </div>
           <button className="btn btn-outline w-full mt-4" onClick={() => navigate('/app/citizen/map')}>
             View on Live Map
           </button>
+        </div>
+
+        {/* Real-time Weather Widget */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+           <WeatherWidget lat={location.coordinates?.lat} lng={location.coordinates?.lng} />
         </div>
       </div>
 

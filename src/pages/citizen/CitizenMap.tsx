@@ -4,6 +4,7 @@ import { useEmergency } from '../../context/EmergencyContext';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import useGeolocation from '../../hooks/useGeolocation';
 
 // Fix Leaflet default icon path issues
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -31,10 +32,24 @@ const userIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+// Helper component to update map center dynamically
+const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  return null;
+};
+
 const CitizenMap: React.FC = () => {
   const { shelters, currentStatus } = useEmergency();
   const navigate = useNavigate();
-  const center: [number, number] = [12.9716, 77.5946];
+  const location = useGeolocation();
+  
+  const defaultCenter: [number, number] = [12.9716, 77.5946];
+  const center: [number, number] = location.coordinates 
+    ? [location.coordinates.lat, location.coordinates.lng] 
+    : defaultCenter;
 
   // Mock route based on status
   const safeRoute: [number, number][] = [
@@ -55,6 +70,7 @@ const CitizenMap: React.FC = () => {
       
       <div className="map-container" style={{ flex: 1, zIndex: 0 }}>
         <MapContainer center={center} zoom={14} style={{ height: '100%', width: '100%' }}>
+          <MapUpdater center={center} />
           <TileLayer
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -106,7 +122,11 @@ const CitizenMap: React.FC = () => {
       <div className="card" style={{ position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: '90%', maxWidth: '400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontWeight: 600 }}>YOUR LOCATION</div>
-          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Current location detected</div>
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+            {location.loaded 
+              ? (location.coordinates ? "Live location detected" : "Location access denied")
+              : "Detecting location..."}
+          </div>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/app/citizen/shelters')}>
           Find Safe Shelter

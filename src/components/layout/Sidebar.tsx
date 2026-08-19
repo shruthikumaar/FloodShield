@@ -25,7 +25,7 @@ const GovernmentLinks = [
 ];
 
 export const Sidebar: React.FC = () => {
-  const { role } = useAuth();
+  const { role, logout } = useAuth();
   
   const links = role === 'GOVERNMENT' ? GovernmentLinks : CitizenLinks;
 
@@ -51,6 +51,17 @@ export const Sidebar: React.FC = () => {
           </NavLink>
         ))}
       </nav>
+      
+      <div className="sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+        <button 
+          onClick={() => logout()} 
+          className="nav-link" 
+          style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text-secondary)' }}
+        >
+          <LogOut size={20} />
+          <span>Logout</span>
+        </button>
+      </div>
     </div>
   );
 };
