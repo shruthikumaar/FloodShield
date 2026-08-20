@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
 import { AlertTriangle, Info, BellRing } from 'lucide-react';
 
 const CitizenAlerts: React.FC = () => {
   const { alerts } = useEmergency();
+  const [expandedAlerts, setExpandedAlerts] = useState<Record<string, boolean>>({});
+
+  const toggleAlertDetails = (id: string) => {
+    setExpandedAlerts(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   const getIcon = (type: string) => {
     switch(type) {
@@ -46,7 +54,19 @@ const CitizenAlerts: React.FC = () => {
                 <div><strong>Time:</strong> {alert.time}</div>
               </div>
               
-              <button className="btn btn-outline mt-4">View Details</button>
+              <button 
+                className="btn btn-outline mt-4"
+                onClick={() => toggleAlertDetails(alert.id)}
+              >
+                {expandedAlerts[alert.id] ? 'Hide Details' : 'View Details'}
+              </button>
+              
+              {expandedAlerts[alert.id] && alert.details && (
+                <div className="mt-4 p-4 rounded" style={{ backgroundColor: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary)' }}>
+                  <h5 style={{ fontWeight: 600, marginBottom: '8px', fontSize: '0.95rem' }}>Additional Information</h5>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{alert.details}</p>
+                </div>
+              )}
             </div>
           </div>
         ))}

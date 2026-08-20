@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
 import { ShieldAlert, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,14 @@ import { useNavigate } from 'react-router-dom';
 const CitizenShelters: React.FC = () => {
   const { shelters } = useEmergency();
   const navigate = useNavigate();
+  const [expandedShelters, setExpandedShelters] = useState<Record<string, boolean>>({});
+
+  const toggleShelterDetails = (id: string) => {
+    setExpandedShelters(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   // Sort by available capacity (descending), then by distance (ascending)
   const sortedShelters = [...shelters].sort((a, b) => {
@@ -62,7 +70,13 @@ const CitizenShelters: React.FC = () => {
             </div>
 
             <div className="flex gap-4">
-              <button className="btn btn-outline" style={{ flex: 1 }}>View Details</button>
+              <button 
+                className="btn btn-outline" 
+                style={{ flex: 1 }}
+                onClick={() => toggleShelterDetails(shelter.id)}
+              >
+                {expandedShelters[shelter.id] ? 'Hide Details' : 'View Details'}
+              </button>
               {shelter.status !== 'FULL' && (
                 <button 
                   className="btn btn-primary" 
@@ -74,6 +88,24 @@ const CitizenShelters: React.FC = () => {
                 </button>
               )}
             </div>
+
+            {expandedShelters[shelter.id] && (
+              <div className="mt-4 p-4 rounded" style={{ backgroundColor: 'var(--bg-secondary, #f1f5f9)', color: 'var(--text-primary)' }}>
+                <h5 style={{ fontWeight: 600, marginBottom: '12px', fontSize: '0.95rem' }}>Shelter Information</h5>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '0.9rem' }}>
+                  {shelter.address && (
+                    <div><strong style={{ color: 'var(--text-secondary)' }}>Address:</strong> {shelter.address}</div>
+                  )}
+                  {shelter.contactInfo && (
+                    <div><strong style={{ color: 'var(--text-secondary)' }}>Contact:</strong> {shelter.contactInfo}</div>
+                  )}
+                  <div><strong style={{ color: 'var(--text-secondary)' }}>Coordinates:</strong> {shelter.lat.toFixed(4)}, {shelter.lng.toFixed(4)}</div>
+                  <div style={{ marginTop: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    Note: Please carry essential documents and personal medications.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>

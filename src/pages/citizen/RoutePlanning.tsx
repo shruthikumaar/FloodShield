@@ -65,6 +65,15 @@ const RoutePlanning: React.FC = () => {
     [12.9700, 77.5970] // old path which is now flooded
   ] : [];
 
+  const handleStartNavigation = () => {
+    if (selectedShelter) {
+      const origin = `${center[0]},${center[1]}`;
+      const destination = `${selectedShelter.lat},${selectedShelter.lng}`;
+      const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+      window.open(googleMapsUrl, '_blank');
+    }
+  };
+
   if (!selectedShelter) {
     return (
       <div className="dashboard-container" style={{ maxWidth: '800px' }}>
@@ -190,7 +199,11 @@ const RoutePlanning: React.FC = () => {
               </ol>
             </div>
 
-            <button className="btn btn-primary w-full mt-4" style={{ padding: '16px', fontSize: '1rem' }}>
+            <button 
+              className="btn btn-primary w-full mt-4" 
+              style={{ padding: '16px', fontSize: '1rem' }}
+              onClick={handleStartNavigation}
+            >
               <Navigation size={20} style={{ marginRight: '8px' }} />
               START NAVIGATION
             </button>
