@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEmergency } from '../../context/EmergencyContext';
-import { ShieldAlert, Navigation } from 'lucide-react';
+import { ShieldAlert, Navigation, Loader2, CheckCircle2, ShieldCheck, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useGeolocation from '../../hooks/useGeolocation';
 
 const CitizenShelters: React.FC = () => {
-  const { shelters } = useEmergency();
+  const { shelters, isFetchingShelters, fetchDynamicShelters } = useEmergency();
   const navigate = useNavigate();
+  const location = useGeolocation();
   const [expandedShelters, setExpandedShelters] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (location.loaded && location.coordinates) {
+      fetchDynamicShelters(location.coordinates.lat, location.coordinates.lng);
+    }
+  }, [location.loaded, location.coordinates, fetchDynamicShelters]);
 
   const toggleShelterDetails = (id: string) => {
     setExpandedShelters(prev => ({
@@ -25,10 +33,24 @@ const CitizenShelters: React.FC = () => {
 
   return (
     <div className="dashboard-container" style={{ maxWidth: '800px' }}>
-      <h2 className="mb-4">Nearby Safe Shelters</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2>Nearby Safe Shelters</h2>
+        {isFetchingShelters && (
+          <div className="flex items-center gap-2" style={{ color: 'var(--brand-primary)', fontSize: '0.875rem' }}>
+            <Loader2 className="spinner" size={16} />
+            Finding live shelters...
+          </div>
+        )}
+      </div>
       
       <div className="flex flex-col gap-4">
-        {sortedShelters.map(shelter => (
+        {isFetchingShelters && shelters.length === 0 ? (
+          <div className="card flex justify-center items-center p-8">
+            <Loader2 className="spinner" size={32} color="var(--brand-primary)" />
+            <span className="ml-4">Scanning for nearby safe zones and shelters...</span>
+          </div>
+        ) : (
+          sortedShelters.map(shelter => (
           <div key={shelter.id} className="card" style={{ opacity: shelter.status === 'FULL' ? 0.7 : 1 }}>
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -36,8 +58,30 @@ const CitizenShelters: React.FC = () => {
                   <ShieldAlert size={20} color={shelter.status === 'FULL' ? 'var(--status-danger)' : 'var(--brand-primary)'} />
                   {shelter.name}
                 </h3>
-                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  Distance: {shelter.distance} km
+                <div style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '4px' }}>
+                  Distance: {shelter.distance} km away
+                </div>
+                
+                {/* Badges for Verified and Risk */}
+                <div className="flex gap-2 mt-2">
+                  {shelter.isGovVerified && (
+                    <span className="badge" style={{ backgroundColor: 'var(--status-info-bg, #eff6ff)', color: 'var(--status-info, #3b82f6)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <ShieldCheck size={12} />
+                      Govt Verified
+                    </span>
+                  )}
+                  {shelter.isHistoricallySafe && (
+                    <span className="badge" style={{ backgroundColor: 'var(--status-caution-bg, #fef3c7)', color: 'var(--status-caution, #d97706)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <History size={12} />
+                      Frequently Used Safe Zone
+                    </span>
+                  )}
+                  {shelter.isLowRiskArea && (
+                    <span className="badge" style={{ backgroundColor: 'var(--status-safe-bg, #ecfdf5)', color: 'var(--status-safe, #10b981)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <CheckCircle2 size={12} />
+                      Low Disaster Risk Zone
+                    </span>
+                  )}
                 </div>
               </div>
               <div className={`badge ${shelter.status === 'FULL' ? 'badge-danger' : 'badge-safe'}`}>
@@ -107,7 +151,7 @@ const CitizenShelters: React.FC = () => {
               </div>
             )}
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

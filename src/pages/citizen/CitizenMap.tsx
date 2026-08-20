@@ -23,6 +23,24 @@ const shelterIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+const fullShelterIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
+const safeZoneIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 const userIcon = new L.Icon({
   iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
@@ -42,28 +60,20 @@ const MapUpdater: React.FC<{ center: [number, number] }> = ({ center }) => {
 };
 
 const CitizenMap: React.FC = () => {
-  const { shelters, currentStatus } = useEmergency();
+  const { shelters, currentStatus, fetchDynamicShelters, isFetchingShelters } = useEmergency();
   const navigate = useNavigate();
   const location = useGeolocation();
   
   const defaultCenter: [number, number] = [12.9716, 77.5946];
-  const center: [number, number] = location.coordinates 
+  const center: [number, number] = (location.loaded && location.coordinates)
     ? [location.coordinates.lat, location.coordinates.lng] 
     : defaultCenter;
 
-  // Mock route based on status
-  const safeRoute: [number, number][] = [
-    [12.9716, 77.5946],
-    [12.9720, 77.5950],
-    [12.9700, 77.5970],
-    [12.9650, 77.5850] // To Town Hall
-  ];
-
-  const floodedRoute: [number, number][] = [
-    [12.9716, 77.5946],
-    [12.9730, 77.5940],
-    [12.9750, 77.5920]
-  ];
+  useEffect(() => {
+    if (location.loaded && location.coordinates && shelters.length === 0 && !isFetchingShelters) {
+      fetchDynamicShelters(location.coordinates.lat, location.coordinates.lng);
+    }
+  }, [location.loaded, location.coordinates, shelters.length, isFetchingShelters, fetchDynamicShelters]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -82,39 +92,47 @@ const CitizenMap: React.FC = () => {
           </Marker>
 
           {/* Shelters */}
-          {shelters.map(shelter => (
-            <Marker key={shelter.id} position={[shelter.lat, shelter.lng]} icon={shelterIcon}>
-              <Popup>
-                <strong>{shelter.name}</strong><br/>
-                Capacity: {shelter.available} / {shelter.capacity}<br/>
-                Status: {shelter.status}
-              </Popup>
-            </Marker>
-          ))}
+          {shelters.map(shelter => {
+            let markerIcon = shelterIcon;
+            if (shelter.status === 'FULL') markerIcon = fullShelterIcon;
+            else if (shelter.isHistoricallySafe) markerIcon = safeZoneIcon;
 
-          {/* Routes/Roads */}
-          <Polyline positions={safeRoute} color="var(--status-safe)" weight={5} opacity={0.8} />
-          {currentStatus === 'FLOODED' || currentStatus === 'EVACUATE' ? (
-             <Polyline positions={floodedRoute} color="var(--status-flooded)" weight={5} opacity={0.8} dashArray="10, 10" />
-          ) : null}
-          
+            return (
+              <Marker key={shelter.id} position={[shelter.lat, shelter.lng]} icon={markerIcon}>
+                <Popup>
+                  <strong>{shelter.name}</strong><br/>
+                  Capacity: {shelter.available} / {shelter.capacity}<br/>
+                  Status: {shelter.status}
+                  {shelter.isHistoricallySafe && <div style={{color: '#d97706', fontSize: '0.8rem', marginTop: '4px'}}>Frequently Used Safe Zone</div>}
+                </Popup>
+              </Marker>
+            );
+          })}
+
         </MapContainer>
       </div>
 
       {/* Legend */}
-      <div className="card" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10, padding: '12px', minWidth: '150px' }}>
-        <h4 style={{ marginBottom: '8px', fontSize: '0.875rem' }}>Map Legend</h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.75rem' }}>
-          <div style={{ width: '12px', height: '12px', backgroundColor: 'var(--brand-primary)', borderRadius: '50%' }}></div> YOUR LOCATION
+      <div className="card" style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 1000, padding: '16px', minWidth: '180px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(4px)' }}>
+        <h4 style={{ marginBottom: '12px', fontSize: '0.9rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>Map Legend</h4>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#2b82cb', borderRadius: '50%' }}></div> Your Location
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.75rem' }}>
-          <div style={{ width: '12px', height: '12px', backgroundColor: 'var(--status-safe)', borderRadius: '50%' }}></div> SHELTER
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#2aad27', borderRadius: '50%' }}></div> Active Shelter
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.75rem' }}>
-          <div style={{ width: '12px', height: '3px', backgroundColor: 'var(--status-safe)' }}></div> SAFE ROAD
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#cb2b3e', borderRadius: '50%' }}></div> Full / Closed Shelter
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.75rem' }}>
-          <div style={{ width: '12px', height: '3px', backgroundColor: 'var(--status-flooded)' }}></div> FLOODED ROAD
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '12px', backgroundColor: '#cb8427', borderRadius: '50%' }}></div> Historical Safe Zone
+        </div>
+        <div style={{ borderTop: '1px solid var(--border-color)', margin: '8px 0' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '3px', backgroundColor: 'var(--status-safe)' }}></div> Safe Evacuation Route
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: '0.8rem' }}>
+          <div style={{ width: '12px', height: '3px', backgroundColor: 'var(--status-flooded)', borderBottom: '2px dashed white' }}></div> Waterlogged / Flooded
         </div>
       </div>
 

@@ -16,8 +16,22 @@ interface WeatherData {
   locationName: string;
 }
 
-// NOTE: For a real app, use an API key in .env (e.g. VITE_OPENWEATHER_API_KEY)
-const API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || ''; 
+// Removed API_KEY check since we're using free Open-Meteo API
+
+const getWmoDescription = (code: number) => {
+  if (code === 0) return { condition: 'Clear', description: 'clear sky' };
+  if (code === 1) return { condition: 'Clouds', description: 'mainly clear' };
+  if (code === 2) return { condition: 'Clouds', description: 'partly cloudy' };
+  if (code === 3) return { condition: 'Clouds', description: 'overcast' };
+  if (code === 45 || code === 48) return { condition: 'Clouds', description: 'fog' };
+  if (code >= 51 && code <= 57) return { condition: 'Drizzle', description: 'drizzle' };
+  if (code >= 61 && code <= 67) return { condition: 'Rain', description: 'rain' };
+  if (code >= 71 && code <= 77) return { condition: 'Snow', description: 'snow' };
+  if (code >= 80 && code <= 82) return { condition: 'Rain', description: 'rain showers' };
+  if (code >= 85 && code <= 86) return { condition: 'Snow', description: 'snow showers' };
+  if (code >= 95 && code <= 99) return { condition: 'Thunderstorm', description: 'thunderstorm' };
+  return { condition: 'Clouds', description: 'unknown' };
+};
 
 export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ lat, lng }) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -26,39 +40,38 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ lat, lng }) => {
 
   useEffect(() => {
     if (lat === undefined || lng === undefined) return;
-    
-    if (!API_KEY) {
-       // Mock weather if no API key is provided
-       setLoading(true);
-       setTimeout(() => {
-           setWeather({
-               temp: 28,
-               condition: 'Clouds',
-               description: 'scattered clouds',
-               humidity: 65,
-               windSpeed: 4.2,
-               locationName: 'Current Location (Mock)'
-           });
-           setLoading(false);
-       }, 800);
-       return;
-    }
 
     const fetchWeather = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=metric&appid=${API_KEY}`);
-        if (!res.ok) throw new Error('Failed to fetch weather data');
-        const data = await res.json();
+        // 1. Fetch Location Name (Reverse Geocoding)
+        let locationName = 'Current Location';
+        try {
+          const locRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          if (locRes.ok) {
+            const locData = await locRes.json();
+            locationName = locData.address?.city || locData.address?.town || locData.address?.village || locData.address?.county || 'Current Location';
+          }
+        } catch (e) {
+          console.warn("Failed to reverse geocode");
+        }
+
+        // 2. Fetch Live Weather from Open-Meteo
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+        if (!weatherRes.ok) throw new Error('Failed to fetch weather data');
+        const data = await weatherRes.json();
         
+        const current = data.current;
+        const wmo = getWmoDescription(current.weather_code);
+
         setWeather({
-          temp: Math.round(data.main.temp),
-          condition: data.weather[0].main,
-          description: data.weather[0].description,
-          humidity: data.main.humidity,
-          windSpeed: data.wind.speed,
-          locationName: data.name
+          temp: Math.round(current.temperature_2m),
+          condition: wmo.condition,
+          description: wmo.description,
+          humidity: current.relative_humidity_2m,
+          windSpeed: current.wind_speed_10m,
+          locationName: locationName
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');

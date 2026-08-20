@@ -22,6 +22,7 @@ const GovernmentLinks = [
   { to: '/app/government/map', label: 'Live Monitoring', icon: <Layers size={20} /> },
   { to: '/app/government/sensors', label: 'Sensors', icon: <ActivitySquare size={20} /> },
   { to: '/app/government/shelters', label: 'Shelters Mgmt', icon: <ShieldAlert size={20} /> },
+  { to: '/app/government/reports', label: 'Citizen Reports', icon: <FileText size={20} /> },
 ];
 
 export const Sidebar: React.FC = () => {

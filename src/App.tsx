@@ -20,6 +20,7 @@ import GovControlCenter from './pages/government/GovControlCenter';
 import GovMap from './pages/government/GovMap';
 import GovSensors from './pages/government/GovSensors';
 import GovShelters from './pages/government/GovShelters';
+import GovReports from './pages/government/GovReports';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
           <Route path="government/map" element={<GovMap />} />
           <Route path="government/sensors" element={<GovSensors />} />
           <Route path="government/shelters" element={<GovShelters />} />
+          <Route path="government/reports" element={<GovReports />} />
           
           {/* Shared Routes */}
           <Route path="profile" element={<Profile />} />
